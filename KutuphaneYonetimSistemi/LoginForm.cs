@@ -43,41 +43,48 @@ namespace KutuphaneYonetimSistemi
         {
             string kullaniciAdi = txtKullaniciAdi.Text.Trim();
             string parola = txtParola.Text;
-            //kullanıcı adı ve şifre alınır
 
-            if (string.IsNullOrWhiteSpace(kullaniciAdi) || string.IsNullOrWhiteSpace(parola)) //boş alan kontrolü
+            if (string.IsNullOrWhiteSpace(kullaniciAdi) || string.IsNullOrWhiteSpace(parola))
             {
                 lblMesaj.Text = "Kullanıcı adı ve parola boş olamaz.";
                 return;
             }
-            byte[] hashedPassword = HashPassword(parola); //kullanıcının girdiği şifre hashlanir
+
+            byte[] hashedPassword = HashPassword(parola);
 
             using (SqlConnection conn = DatabaseHelper.GetConnection())
+            using (SqlCommand cmd = new SqlCommand("sp_KullaniciGirisKontrol", conn))
             {
-                SqlCommand cmd = new SqlCommand("sp_KullaniciGirisKontrol", conn)
-                {
-                    CommandType = CommandType.StoredProcedure
-                };
+                cmd.CommandType = CommandType.StoredProcedure;
 
-                cmd.Parameters.AddWithValue("@KullaniciAdi", txtKullaniciAdi.Text);
-                cmd.Parameters.AddWithValue("@Parola", hashedPassword);
+                // AddWithValue yerine tip belirterek eklemek daha güvenli
+                cmd.Parameters.Add("@KullaniciAdi", SqlDbType.NVarChar, 50).Value = kullaniciAdi;
+                cmd.Parameters.Add("@Parola", SqlDbType.VarBinary, 32).Value = hashedPassword;
 
                 try
                 {
                     conn.Open();
-                    SqlDataReader reader = cmd.ExecuteReader();  //sp çalışır ve kayıt varsa satır döner
-
-                    if (reader.Read())
+                    using (SqlDataReader reader = cmd.ExecuteReader())
                     {
-                        Session.KullaniciID = reader.GetInt32(0);
-                        Session.AdSoyad = $"{reader.GetString(1)} {reader.GetString(2)}";
+                        if (reader.Read())
+                        {
+                            //int kullaniciID = (int)reader["KullaniciID"];
+                           //string ad = reader["Ad"].ToString();
+                           // string soyad = reader["Soyad"].ToString();  bu da doğru bir kullanım ancak aşağıdaki göntem daha hızlı. aşağıda index numarasına döre 
+                            int kullaniciID = reader.GetInt32(0);
+                            string ad = reader.GetString(1);
+                            string soyad = reader.GetString(2);
 
-                        this.Hide();
-                        new MainForm().Show(); //login form gizlenir main form açılır
-                    }
-                    else
-                    {
-                        lblMesaj.Text = "Geçersiz kullanıcı adı veya şifre!";
+                            Session.KullaniciID = kullaniciID;
+                            Session.AdSoyad = $"{ad} {soyad}";
+
+                            this.Hide();
+                            new MainForm().Show(); 
+                        }
+                        else
+                        {
+                            lblMesaj.Text = "Geçersiz kullanıcı adı veya şifre!";
+                        }
                     }
                 }
                 catch (Exception ex)
@@ -85,9 +92,9 @@ namespace KutuphaneYonetimSistemi
                     MessageBox.Show($"Hata: {ex.Message}", "Hata", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 }
             }
-        }
 
-        
+
+        }
     }
 }
 

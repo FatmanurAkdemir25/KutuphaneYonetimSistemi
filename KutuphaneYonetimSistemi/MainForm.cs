@@ -65,7 +65,7 @@ namespace KutuphaneYonetimSistemi
 
         private void listeleToolStripMenuItem2_Click(object sender, EventArgs e)
         {
-            new OduncListeleForm().ShowDialog();
+            new RaporForm().ShowDialog();
         }
 
         private void yazarEkleToolStripMenuItem_Click(object sender, EventArgs e)
